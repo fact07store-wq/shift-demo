@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ILY Manager(試作)</title>
+<meta name="theme-color" content="#2b1d3a">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root { --bg:#f5f3f8; --card:#fff; --text:#1d1828; --sub:#6b6478; --main:#5b3e8c; --accent:#c2185b; --line:#e3dfea;
+          --ok:#2e7d32; --warn:#e65100; --ng:#c62828; --nav-h:60px; --safe-b:env(safe-area-inset-bottom, 0px); }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141018; --card:#211b2a; --text:#f1edf7; --sub:#a59db3; --main:#a98be0; --line:#342b40; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; }
+  .demo { background: #2b1d3a; color: #fff; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; font-size: 13px; }
+  .demo b { color: #ffd54f; }
+  .demo .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  .demo select, .demo button { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 0; }
+  .demo button.on { background: #ffd54f; }
+  header { padding: 12px 16px 4px; }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 2px 0 0; color: var(--sub); font-size: 13px; }
+  main { padding: 8px 16px calc(var(--nav-h) + var(--safe-b) + 24px); max-width: 720px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  .muted { color: var(--sub); font-size: 13px; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+  .b-ok { background: #e8f5e9; color: var(--ok); } .b-ng { background: #ffebee; color: var(--ng); } .b-warn { background: #fff3e0; color: var(--warn); }
+  .big { font-size: 34px; font-weight: 800; }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 6px 0; }
+  .bar i { display: block; height: 100%; background: var(--main); }
+  .day { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .day:last-child { border-bottom: 0; }
+  .day .d { font-weight: 700; }
+  .day .d small { color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .tgl { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
+  .tgl input { width: 24px; height: 24px; accent-color: var(--main); }
+  .rides { grid-column: 1 / -1; display: flex; gap: 14px; padding-left: 4px; }
+  .rides label { font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+  .rides input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .rides.off { display: none; }
+  button.main { width: 100%; font: inherit; font-size: 17px; font-weight: 700; padding: 15px; border: 0; border-radius: 12px; background: var(--main); color: #fff; margin-top: 12px; }
+  button.main:disabled { background: #b8b2c4; }
+  .list li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li:last-child { border-bottom: 0; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 520px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 7px 4px; text-align: center; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); }
+  .yes { color: var(--main); font-weight: 800; }
+  .ride { font-size: 10px; color: var(--accent); display: block; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
+        height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b); z-index: 10; }
+  nav button { flex: 1; border: 0; background: none; font: inherit; font-size: 12px; color: var(--sub); }
+  nav button b { display: block; font-size: 20px; }
+  nav button.on { color: var(--main); font-weight: 700; }
+  #toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + var(--safe-b) + 16px); transform: translateX(-50%); background: #222; color: #fff;
+           padding: 10px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 20; }
+  #toast.on { opacity: .92; }
+  .hidden { display: none !important; }
+  select, input[type=time] { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .rowc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; font-size: 13px; }
+  .rowc label { display: inline-flex; gap: 4px; align-items: center; }
+  button.sub { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--main); background: var(--card); color: var(--main); }
+  .daytabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+  .daytabs button { flex: 0 0 auto; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .daytabs button.on { background: var(--main); color: #fff; border-color: var(--main); }
+</style>
+</head>
+<body>
+
+<!-- 試作用の切り替え(本番では、ログインした人の役割で自動的に決まる) -->
+<div class="demo">
+  <b>試作版</b>(サンプルデータのみ・実在の人物ではありません)
+  <div class="row">
+    役割:
+    <button data-role="cast">キャスト</button>
+    <button data-role="admin">管理者</button>
+    <button data-role="driver">ドライバー</button>
+  </div>
+  <div class="row" id="castPick">
+    ログイン中のキャスト:<select id="castSel"></select>
+  </div>
+  <div class="row hidden" id="driverPick">
+    ログイン中のドライバー:<select id="driverSel"></select>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="afterDeadline"> 締切後(土曜を過ぎた状態)として表示</label>
+    <button id="resetBtn">サンプルを初期状態に戻す</button>
+  </div>
+</div>
+
+<header><h1 id="pageTitle">ILY Manager</h1><p id="pageSub"></p></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div id="toast"></div>
+
+<script>
+// ===== サンプルデータ(すべて架空) =====
+const STORE = { id: "s1", name: "ILY(サンプル)" };
+const CAST_NAMES = ["あおい","いろは","うみ","えま","かれん","きらら","さくら","しずく","すず","ちか","つばさ","なな","ひかり","まりあ","ゆめ"];
+const DRIVER_NAMES = ["ドライバーA","ドライバーB","ドライバーC"];
+const WD = ["日","月","火","水","木","金","土"];
+
+function nextWeekMonday(base) {           // 来週の月曜日
+  const d = new Date(base); d.setHours(0,0,0,0);
+  const add = ((8 - d.getDay()) % 7) || 7; d.setDate(d.getDate() + add); return d;
+}
+function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function md(s) { const d = new Date(s + "T00:00:00"); return (d.getMonth()+1) + "/" + d.getDate(); }
+function wd(s) { return WD[new Date(s + "T00:00:00").getDay()]; }
+
+// 定休日:日曜日と祝日(内閣府の「国民の祝日」2026年分。2027年以降は年ごとに追加する)
+const HOLIDAYS = {
+  "2026-01-01": "元日", "2026-01-12": "成人の日", "2026-02-11": "建国記念の日", "2026-02-23": "天皇誕生日",
+  "2026-03-20": "春分の日", "2026-04-29": "昭和の日", "2026-05-03": "憲法記念日", "2026-05-04": "みどりの日",
+  "2026-05-05": "こどもの日", "2026-05-06": "休日(振替)", "2026-07-20": "海の日", "2026-08-11": "山の日",
+  "2026-09-21": "敬老の日", "2026-09-22": "休日(国民の休日)", "2026-09-23": "秋分の日", "2026-10-12": "スポーツの日",
+  "2026-11-03": "文化の日", "2026-11-23": "勤労感謝の日"
+};
+function closedReason(s) { if (new Date(s + "T00:00:00").getDay() === 0) return "日曜定休"; return HOLIDAYS[s] ? "祝日定休(" + HOLIDAYS[s] + ")" : ""; }
+function openDays() { return db.week.days.filter(d => !closedReason(d)); }
+
+function makeSample() {
+  const mon = nextWeekMonday(new Date());
+  const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(d.getDate() + i); return ymd(d); });
+  const sat = new Date(mon); sat.setDate(sat.getDate() - 2);       // 前の週の土曜日が締切
+  const members = [
+    ...CAST_NAMES.map((n, i) => ({ id: "c" + (i+1), store: STORE.id, role: "cast", name: n, active: true })),
+    ...DRIVER_NAMES.map((n, i) => ({ id: "d" + (i+1), store: STORE.id, role: "driver", name: n, active: true })),
+    { id: "a1", store: STORE.id, role: "admin", name: "店長(サンプル)", active: true }
+  ];
+  // 出勤希望(R1:確定シフトとは別に持つ)。サンプルとして10人が提出済み、5人が未提出
+  const requests = []; const submissions = [];
+  CAST_NAMES.forEach((n, i) => {
+    if (i >= 10) return;
+    const picked = days.filter((d, k) => (i + k) % 3 !== 0 && !closedReason(d));
+    picked.forEach(day => requests.push({ cast: "c" + (i+1), day, pickup: (i + day.length) % 2 === 0, dropoff: true }));
+    submissions.push({ cast: "c" + (i+1), at: new Date(sat.getTime() - (i + 1) * 3600e3).toISOString() });
+  });
+  // キャストごとの基本の送迎場所(R8:管理者と担当ドライバーだけが見られる)。すべて架空
+  const locations = CAST_NAMES.map((n, i) => ({ cast: "c" + (i+1), label: ["自宅", "最寄り駅", "自宅前のコンビニ"][i % 3] + "(サンプル)",
+                                                address: "新潟市サンプル町" + (i+1) + "-" + ((i * 7) % 20 + 1) }));
+  return { version: 4, week: { id: "w1", store: STORE.id, start: days[0], days, deadline: ymd(sat) + "T23:59:00", status: "open" },
+           members, requests, submissions, locations,
+           shifts: [], transports: [], shiftHistory: [], transportHistory: [], notices: [] };
+}
+
+// ===== 保存(試作では端末の中だけ。本番ではサーバーのデータベースに置き換える) =====
+const KEY = "ilyManagerDemo.v1";
+let db;
+function load() { try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; } if (!db || db.version !== 4) { db = makeSample(); save(); } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* 保存できない環境では画面上だけで動く */ } }
+
+// ===== 状態 =====
+let role = "cast", castId = "c11", tab = "", forceAfter = false;
+const $ = id => document.getElementById(id);
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2200); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function closed() { return forceAfter || new Date() > new Date(db.week.deadline); }   // R3:締切後は変更不可
+function casts() { return db.members.filter(m => m.role === "cast" && m.active); }
+function submittedAt(id) { const s = db.submissions.find(x => x.cast === id); return s ? s.at : null; }
+function reqOf(id) { return db.requests.filter(r => r.cast === id); }
+function deadlineLabel() { const d = new Date(db.week.deadline); return (d.getMonth()+1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ") " + d.getHours() + ":" + String(d.getMinutes()).padStart(2,"0"); }
+function daysLeft() { return Math.ceil((new Date(db.week.deadline) - new Date()) / 864e5); }
+
+// ===== 画面:キャスト =====
+function castHome() {
+  const me = db.members.find(m => m.id === castId);
+  const at = submittedAt(castId);
+  const n = reqOf(castId).length;
+  return `
+  <div class="card">
+    <h2>${esc(me.name)}さん</h2>
+    <div class="muted">来週(${md(db.week.days[0])}〜${md(db.week.days[6])})のシフト</div>
+    <p style="margin:10px 0">${at ? `<span class="badge b-ok">提出済み</span> 出勤希望 ${n}日` : `<span class="badge b-ng">未提出</span>`}</p>
+    <div class="muted">提出期限:${deadlineLabel()}${closed() ? "(締切済み)" : `(あと${Math.max(0, daysLeft())}日)`} ・ 日曜・祝日は定休日</div>
+    <button class="main" onclick="go('submit')">${castLocked() ? "提出内容を確認する" : at ? "提出内容を確認・修正する" : "シフトを提出する"}</button>
+  </div>
+  ${db.week.status === "finalized" ? `<div class="card"><h2>来週のシフトが確定しました</h2><button class="main" onclick="go('shifts')">確定シフトを見る</button></div>` : ""}
+`;
+}
+
+function castLocked() { return closed() || db.week.status === "finalized"; }   // 締切後・確定後はキャストは変更できない
+function castSubmit() {
+  const lock = castLocked();
+  const mine = reqOf(castId);
+  const rows = db.week.days.map(day => {
+    const r = mine.find(x => x.day === day);
+    const off = closedReason(day);
+    if (off) return `<div class="day"><div class="d">${md(day)}<small>(${wd(day)})</small></div><span class="muted">${off}</span></div>`;
+    return `
+    <div class="day" data-day="${day}">
+      <div class="d">${md(day)}<small>(${wd(day)})</small></div>
+      <label class="tgl"><input type="checkbox" class="want" ${r ? "checked" : ""} ${lock ? "disabled" : ""}> 出勤希望</label>
+      <div class="rides ${r ? "" : "off"}">
+        <label><input type="checkbox" class="pu" ${r && r.pickup ? "checked" : ""} ${lock ? "disabled" : ""}> 行きの送迎</label>
+        <label><input type="checkbox" class="do" ${r && r.dropoff ? "checked" : ""} ${lock ? "disabled" : ""}> 帰りの送迎</label>
+      </div>
+    </div>`;
+  }).join("");
+  return `
+  <div class="card">
+    <h2>来週の出勤希望</h2>
+    <div class="muted">出勤を希望する日にチェックしてください。出勤時間はお店が決めます。<br>提出期限:${deadlineLabel()}</div>
+    ${lock ? `<p><span class="badge b-warn">${db.week.status === "finalized" ? "シフト確定済み" : "締切済み"}</span> 変更はできません。急な欠勤などは、お店に直接連絡してください。</p>` : ""}
+    <div id="days">${rows}</div>
+    <button class="main" id="submitBtn" ${lock ? "disabled" : ""}>${submittedAt(castId) ? "修正して提出する" : "この内容で提出する"}</button>
+  </div>`;
+}
+function bindSubmit() {
+  document.querySelectorAll("#days .day").forEach(el => {
+    const want = el.querySelector(".want");
+    if (want) want.onchange = () => el.querySelector(".rides").classList.toggle("off", !want.checked);
+  });
+  const b = $("submitBtn"); if (!b) return;
+  b.onclick = () => {
+    if (castLocked()) { toast("締切後・確定後は提出できません"); return; }
+    const picked = [...document.querySelectorAll("#days .day")].filter(el => el.querySelector(".want") && el.querySelector(".want").checked)
+      .map(el => ({ cast: castId, day: el.dataset.day, pickup: el.querySelector(".pu").checked, dropoff: el.querySelector(".do").checked }));
+    if (!picked.length && !confirm("出勤希望が0日です。このまま提出しますか?")) return;
+    db.requests = db.requests.filter(r => r.cast !== castId).concat(picked);
+    db.submissions = db.submissions.filter(s => s.cast !== castId).concat([{ cast: castId, at: new Date().toISOString() }]);
+    save(); toast("提出しました(出勤希望 " + picked.length + "日)"); go("home");
+  };
+}
+
+// ===== 画面:管理者 =====
+function adminDash() {
+  const all = casts(); const done = all.filter(c => submittedAt(c.id)); const notYet = all.filter(c => !submittedAt(c.id));
+  const pct = Math.round(done.length / all.length * 100);
+  return `
+  <div class="card">
+    <h2>来週(${md(db.week.days[0])}〜${md(db.week.days[6])})の提出状況</h2>
+    <div class="big">${done.length}<small style="font-size:16px"> / ${all.length}人</small></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="muted">提出率 ${pct}% ・ 期限 ${deadlineLabel()}${closed() ? "(締切済み)" : ""}</div>
+  </div>
+  <div class="card">
+    <h2>未提出者 <span class="badge ${notYet.length ? "b-ng" : "b-ok"}">${notYet.length}人</span></h2>
+    ${notYet.length ? `<ul class="list">${notYet.map(c => `<li><span>${esc(c.name)}</span><span class="muted">未提出</span></li>`).join("")}</ul>` : `<div class="muted">全員が提出済みです</div>`}
+  </div>
+  <div class="card"><h2>シフト</h2>${db.week.status === "finalized"
+      ? `<span class="badge b-ok">確定済み</span> <span class="muted">行きの送迎の未割り当て:${db.transports.filter(t => t.dir === "pickup" && !t.driver && !t.cancelled).length}件</span>`
+      : `<span class="badge b-warn">未確定</span> <button class="sub" onclick="go('confirm')">シフト確定へ</button>`}</div>
+`;
+}
+function adminTable() {
+  const head = db.week.days.map(d => `<th>${md(d)}<br>${wd(d)}${closedReason(d) ? `<span class="ride" style="color:var(--sub)">定休</span>` : ""}</th>`).join("");
+  const perDay = db.week.days.map(d => db.requests.filter(r => r.day === d).length);
+  const body = casts().map(c => {
+    const at = submittedAt(c.id);
+    const cells = db.week.days.map(d => {
+      const r = db.requests.find(x => x.cast === c.id && x.day === d);
+      if (!r) return `<td>${at ? "" : "－"}</td>`;
+      const ride = [r.pickup ? "行" : "", r.dropoff ? "帰" : ""].filter(Boolean).join("・");
+      return `<td class="yes">○${ride ? `<span class="ride">${ride}</span>` : ""}</td>`;
+    }).join("");
+    return `<tr><td>${esc(c.name)} ${at ? "" : `<span class="badge b-ng">未</span>`}</td>${cells}</tr>`;
+  }).join("");
+  return `
+  <div class="card">
+    <h2>出勤希望の一覧</h2>
+    <div class="muted">○=出勤希望 / 行=行きの送迎 / 帰=帰りの送迎 / －=未提出</div>
+    <div class="tbl"><table>
+      <thead><tr><th>キャスト</th>${head}</tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr><td><b>希望者数</b></td>${perDay.map(n => `<td><b>${n}</b></td>`).join("")}</tr></tfoot>
+    </table></div>
+  </div>`;
+}
+
+// ===== 試作2回目:確定シフト・送迎の共通処理 =====
+const START_TIMES = []; for (let h = 20; h <= 23; h++) for (const m of ["00", "30"]) START_TIMES.push(h + ":" + m);   // 出勤は20時〜
+const PICKUP_MIN = "18:00";   // 行きの送迎は18時〜
+const END_TIMES = ["23:00", "23:30", "0:00", "0:30", "1:00", "1:30", "2:00", "2:30", "3:00"];
+const STATUS = { waiting: "待機", assigned: "配車済み", in_transit: "送迎中", done: "完了" };   // R10
+const ACTOR = "a1";   // 試作では管理者=店長(サンプル)。本番ではログインした人
+let rideDay = null;
+function nameOf(id) { const m = db.members.find(x => x.id === id); return m ? m.name : "未定"; }
+function drivers() { return db.members.filter(m => m.role === "driver" && m.active); }
+function locOf(cast) { return db.locations.find(l => l.cast === cast); }
+function nowIso() { return new Date().toISOString(); }
+function minus(time, min) { const [h, m] = time.split(":").map(Number); let t = h * 60 + m - min; if (t < 0) t += 1440; return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
+function options(list, cur, blank) { return (blank ? `<option value="">${blank}</option>` : "") + list.map(v => `<option ${v === cur ? "selected" : ""}>${v}</option>`).join(""); }
+// R4:変更はすべて履歴に残す
+function logShift(s, type, before, after) { db.shiftHistory.push({ shift: s.id, cast: s.cast, day: s.day, by: ACTOR, at: nowIso(), type, before, after }); }
+function logRide(t, type, before, after, by) { db.transportHistory.push({ transport: t.id, by: by || ACTOR, at: nowIso(), type, before, after }); }
+// ドライバーへのお知らせ(D3)。担当に関わる変更があったときだけ送る
+function notify(driver, t, text) {
+  if (!driver) return;
+  const s = db.shifts.find(x => x.id === t.shift);
+  db.notices.push({ id: "n" + (db.notices.length + 1), to: driver, transport: t.id, at: nowIso(), read: false,
+                    text: md(s.day) + "(" + wd(s.day) + ") " + nameOf(s.cast) + "さんの行き:" + text });
+}
+function shiftsOn(day) { return db.shifts.filter(s => s.day === day && s.status === "scheduled").sort((a, b) => a.start.localeCompare(b.start) || a.cast.localeCompare(b.cast)); }
+function ridesOf(shiftId) { return db.transports.filter(t => t.shift === shiftId); }
+
+// ===== 画面:管理者 シフト確定(A3) =====
+function adminConfirm() {
+  const finalized = db.week.status === "finalized";
+  const blocks = db.week.days.map(day => {
+    const off = closedReason(day);
+    if (off) return `<div class="card"><h2>${md(day)}(${wd(day)}) <span class="muted">${off}</span></h2></div>`;
+    if (finalized) {
+      const list = shiftsOn(day);
+      const absent = db.shifts.filter(s => s.day === day && s.status === "absent");
+      return `<div class="card"><h2>${md(day)}(${wd(day)}) <span class="muted">${list.length}人</span></h2>
+        ${list.length ? `<ul class="list">${list.map(s => `<li><span>${esc(nameOf(s.cast))}</span>
+          <span><select onchange="setStart('${s.id}', this.value)">${options(START_TIMES, s.start)}</select>
+          <button class="sub" onclick="markAbsent('${s.id}')">欠勤</button></span></li>`).join("")}</ul>` : `<div class="muted">出勤者なし</div>`}
+        ${absent.length ? `<div class="muted" style="margin-top:8px">欠勤:${absent.map(s => `${esc(nameOf(s.cast))} <button class="sub" onclick="undoAbsent('${s.id}')">出勤に戻す</button>`).join(" ")}</div>` : ""}</div>`;
+    }
+    const reqs = db.requests.filter(r => r.day === day).sort((a, b) => a.cast.localeCompare(b.cast));
+    return `<div class="card"><h2>${md(day)}(${wd(day)}) <span class="muted">希望 ${reqs.length}人</span></h2>
+      ${reqs.length ? `<ul class="list">${reqs.map(r => `<li class="cf" data-cast="${r.cast}" data-day="${day}">
+        <label class="tgl"><input type="checkbox" class="on" checked> ${esc(nameOf(r.cast))}</label>
+        <select class="st">${options(START_TIMES, "20:00")}</select></li>`).join("")}</ul>` : `<div class="muted">希望者なし</div>`}</div>`;
+  }).join("");
+  const head = finalized
+    ? `<div class="card"><span class="badge b-ok">確定済み</span> <span class="muted">キャストは変更できません。管理者だけが出勤時間の変更と欠勤の設定をできます(変更は履歴に残ります)。</span></div>`
+    : `<div class="card"><div class="muted">出勤させる人にチェックを入れ、出勤時間(20時〜)を選んで「週を確定する」を押してください。確定すると、キャストの「確定シフト」に表示され、送迎の予定が作られます。<b>確定後、キャストは変更できません(管理者は変更できます)。</b></div>
+       ${closed() ? "" : `<p><span class="badge b-warn">注意</span> まだ提出期限前です</p>`}</div>`;
+  return head + blocks + (finalized ? "" : `<button class="main" onclick="finalizeWeek()">この内容で週を確定する</button>`);
+}
+function finalizeWeek() {
+  if (!closed() && !confirm("まだ提出期限前ですが、確定しますか?")) return;
+  if (!confirm("この内容で週のシフトを確定しますか?確定後、キャストは変更できなくなります。")) return;
+  let n = 0;
+  document.querySelectorAll("li.cf").forEach(el => {
+    if (!el.querySelector(".on").checked) return;
+    const cast = el.dataset.cast, day = el.dataset.day, start = el.querySelector(".st").value;
+    const s = { id: "sh" + (++n), week: db.week.id, cast, day, start, endPlan: null, status: "scheduled" };
+    db.shifts.push(s); logShift(s, "確定", null, start);
+    const r = db.requests.find(x => x.cast === cast && x.day === day);
+    if (r && r.pickup) db.transports.push({ id: "tp" + n, shift: s.id, dir: "pickup", time: minus(start, 60), driver: null, status: "waiting", recheck: false });
+    if (r && r.dropoff) db.transports.push({ id: "td" + n, shift: s.id, dir: "dropoff", time: null, driver: null, status: "waiting", recheck: false });   // 帰りは割り当てなし(当面)
+  });
+  db.week.status = "finalized"; save(); toast("週のシフトを確定しました(" + n + "件)"); render();
+}
+// 確定後の変更は管理者だけ(キャストの画面には変更手段がない)。すべて履歴に残す
+function setStart(id, v) {
+  const s = db.shifts.find(x => x.id === id); const before = s.start; s.start = v; logShift(s, "出勤時間の変更", before, v);
+  const p = ridesOf(id).find(t => t.dir === "pickup");
+  if (p && p.status !== "done") { const b = p.time; p.time = minus(v, 60); logRide(p, "行きの時間(出勤時間に連動)", b, p.time); notify(p.driver, p, "時間が " + b + " → " + p.time + " に変わりました"); }
+  save(); toast(nameOf(s.cast) + "の出勤時間を " + v + " に変更しました"); render();
+}
+function markAbsent(id) {
+  const s = db.shifts.find(x => x.id === id);
+  if (!confirm(nameOf(s.cast) + "さんの " + md(s.day) + " を欠勤にしますか?行きの送迎も取り消されます。")) return;
+  s.status = "absent"; logShift(s, "欠勤", "出勤 " + s.start, "欠勤");
+  ridesOf(id).forEach(t => { logRide(t, "取り消し(欠勤)", t.driver ? nameOf(t.driver) : "未割り当て", "取り消し"); notify(t.driver, t, "欠勤のため取り消しになりました"); t.cancelled = true; });
+  save(); toast(nameOf(s.cast) + "さんを欠勤にしました"); render();
+}
+function undoAbsent(id) {
+  const s = db.shifts.find(x => x.id === id);
+  s.status = "scheduled"; logShift(s, "欠勤の取り消し", "欠勤", "出勤 " + s.start);
+  ridesOf(id).forEach(t => { t.cancelled = false; t.driver = null; t.status = "waiting"; logRide(t, "復活(要割り当て)", "取り消し", "待機"); });
+  save(); toast(nameOf(s.cast) + "さんを出勤に戻しました"); render();
+}
+
+// ===== 画面:管理者 送迎管理(A4) =====
+function rideRow(t) {
+  const s = db.shifts.find(x => x.id === t.shift); const loc = locOf(s.cast);
+  if (t.dir === "dropoff") return `<li style="display:block"><b>${esc(nameOf(s.cast))}</b>
+    <div class="muted">📍 ${esc(loc.label)} ・ ${esc(loc.address)}</div>
+    <div class="muted">退勤予定 ${s.endPlan || "未設定"}(帰りのドライバー割り当ては当面なし)</div></li>`;
+  return `<li style="display:block">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b>${esc(nameOf(s.cast))}</b><span class="badge ${t.status === "done" ? "b-ok" : t.driver ? "b-warn" : "b-ng"}">${STATUS[t.status]}</span></div>
+    <div class="muted">📍 ${esc(loc.label)} ・ ${esc(loc.address)}</div>
+    <div class="rowc">
+      <label>時間 <input type="time" min="${PICKUP_MIN}" value="${t.time ? t.time.padStart(5, "0") : ""}" onchange="setRide('${t.id}','time',this.value)"></label>
+      <label>担当 <select onchange="setRide('${t.id}','driver',this.value)">${options(drivers().map(d => d.name), t.driver ? nameOf(t.driver) : "", "未割り当て")}</select></label>
+      <label>状態 <select onchange="setRide('${t.id}','status',this.value)">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === t.status ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+    </div></li>`;
+}
+function adminRides() {
+  if (db.week.status !== "finalized") return `<div class="card muted">先に「シフト確定」で週を確定してください。確定すると、送迎の予定がここに作られます。</div>`;
+  if (!rideDay) rideDay = db.week.days[0];
+  const tabs = db.week.days.map(d => `<button class="${d === rideDay ? "on" : ""}" onclick="rideDay='${d}';render()">${md(d)}<br>${wd(d)}</button>`).join("");
+  const list = shiftsOn(rideDay);
+  const ids = list.map(s => s.id);
+  const pick = db.transports.filter(t => ids.includes(t.shift) && t.dir === "pickup").sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  const drop = db.transports.filter(t => ids.includes(t.shift) && t.dir === "dropoff");
+  const unassigned = pick.filter(t => !t.driver).length;
+  if (closedReason(rideDay)) return `<div class="daytabs">${tabs}</div><div class="card"><h2>${md(rideDay)}(${wd(rideDay)})</h2><div class="muted">${closedReason(rideDay)}</div></div>`;
+  return `
+  <div class="daytabs">${tabs}</div>
+  <div class="card">
+    <h2>${md(rideDay)}(${wd(rideDay)}) 出勤 ${list.length}人 ・ 送迎 ${pick.length + drop.length}件</h2>
+    ${unassigned ? `<span class="badge b-ng">行きのドライバー未割り当て ${unassigned}件</span>` : `<span class="badge b-ok">行きは全件割り当て済み</span>`}
+  </div>
+  <div class="card">
+    <h2>退勤予定時間</h2>
+    <div class="muted">営業状況に合わせて設定します(R9)。帰りの送迎の時間にも反映されます。</div>
+    <div class="rowc"><select id="bulkEnd">${options(END_TIMES, "1:00")}</select><button class="sub" onclick="setEndAll()">この日の全員に設定</button></div>
+    <ul class="list">${list.map(s => `<li><span>${esc(nameOf(s.cast))} <span class="muted">出勤 ${s.start}</span></span>
+      <select onchange="setEnd('${s.id}', this.value)">${options(END_TIMES, s.endPlan || "", "未設定")}</select></li>`).join("")}</ul>
+  </div>
+  <div class="card"><h2>🚗 行きの送迎 <span class="muted">${pick.length}件</span></h2>${pick.length ? `<ul class="list">${pick.map(rideRow).join("")}</ul>` : `<div class="muted">なし</div>`}</div>
+  <div class="card"><h2>🌙 帰りの送迎 <span class="muted">${drop.length}件</span></h2>${drop.length ? `<ul class="list">${drop.map(rideRow).join("")}</ul>` : `<div class="muted">なし</div>`}</div>`;
+}
+function setRide(id, field, v) {
+  const t = db.transports.find(x => x.id === id);
+  if (field === "time") {
+    if (t.dir === "pickup" && v && v < PICKUP_MIN) { toast("行きの送迎は18:00以降で設定してください"); render(); return; }
+    const b = t.time; t.time = v.replace(/^0(\d):/, "$1:") || null; logRide(t, "時間の変更", b, t.time);
+    notify(t.driver, t, "時間が " + (b || "未定") + " → " + (t.time || "未定") + " に変わりました");
+  }
+  if (field === "driver") {
+    const d = drivers().find(x => x.name === v); const b = t.driver ? nameOf(t.driver) : null; const old = t.driver;
+    t.driver = d ? d.id : null; logRide(t, "担当の変更", b, d ? d.name : null);
+    if (old && old !== t.driver) notify(old, t, "担当から外れました");
+    if (t.driver && old !== t.driver) notify(t.driver, t, "担当になりました(" + (t.time || "時間未定") + ")");
+    if (t.driver && t.status === "waiting") { t.status = "assigned"; logRide(t, "状態の変更", "待機", "配車済み"); }
+    if (!t.driver && t.status === "assigned") { t.status = "waiting"; logRide(t, "状態の変更", "配車済み", "待機"); }
+  }
+  if (field === "status") { const b = STATUS[t.status]; t.status = v; logRide(t, "状態の変更", b, STATUS[v]); }
+  save(); render();
+}
+function setEnd(id, v) {
+  const s = db.shifts.find(x => x.id === id); const b = s.endPlan; s.endPlan = v || null; logShift(s, "退勤予定時間の変更", b, s.endPlan);
+  const d = ridesOf(id).find(t => t.dir === "dropoff");
+  if (d && d.status !== "done") { const bt = d.time; d.time = s.endPlan; logRide(d, "帰りの時間(退勤予定に連動)", bt, d.time); }
+  save(); render();
+}
+function setEndAll() { const v = $("bulkEnd").value; shiftsOn(rideDay).forEach(s => setEnd(s.id, v)); toast(md(rideDay) + "の退勤予定を " + v + " に設定しました"); }
+
+// ===== 画面:キャスト 確定シフト(C3) =====
+function castShifts() {
+  if (db.week.status !== "finalized") return `<div class="card"><h2>来週の確定シフト</h2><div class="muted">まだお店が確定していません。確定するとここに表示されます。</div></div>`;
+  const mine = db.shifts.filter(s => s.cast === castId && s.status === "scheduled").sort((a, b) => a.day.localeCompare(b.day));
+  const rideText = (t, label) => !t ? "" : t.dir === "dropoff"
+    ? `<div class="muted">${label}:${t.time ? t.time + "ごろ(退勤予定)" : "時間未定"}</div>`
+    : `<div class="muted">${label}:${t.time ? t.time : "時間未定"} ・ ${t.driver ? esc(nameOf(t.driver)) : "ドライバー未定"}</div>`;
+  return `<div class="card"><h2>来週の確定シフト</h2>
+    ${mine.length ? `<ul class="list">${mine.map(s => {
+      const rs = ridesOf(s.id);
+      return `<li style="display:block"><b>${md(s.day)}(${wd(s.day)})</b> 出勤 ${s.start}${s.endPlan ? ` ・ 退勤予定 ${s.endPlan}` : ""}
+        ${rideText(rs.find(t => t.dir === "pickup"), "🚗 行き")}${rideText(rs.find(t => t.dir === "dropoff"), "🌙 帰り")}</li>`;
+    }).join("")}</ul>` : `<div class="muted">来週の出勤はありません</div>`}
+    <div class="muted" style="margin-top:8px">送迎の時間とドライバーは、お店の調整で変わることがあります。</div></div>`;
+}
+
+// ===== 画面:ドライバー =====
+// R7:ドライバーは自分が担当する送迎だけを見られる(本番ではデータベース側で制限する)
+let driverId = "d1", driverDay = null;
+function myRides(day) {
+  const ids = shiftsOn(day).map(s => s.id);
+  return db.transports.filter(t => t.driver === driverId && !t.cancelled && t.dir === "pickup" && ids.includes(t.shift))
+    .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+}
+function unreadFor(tid) { return db.notices.some(n => n.to === driverId && n.transport === tid && !n.read); }
+function driverHome() {
+  if (db.week.status !== "finalized") return `<div class="card"><h2>担当の送迎</h2><div class="muted">まだシフトが確定していません。</div></div>`;
+  if (!driverDay) driverDay = openDays()[0];
+  const tabs = db.week.days.map(d => {
+    const n = closedReason(d) ? 0 : myRides(d).length;
+    return `<button class="${d === driverDay ? "on" : ""}" onclick="driverDay='${d}';render()">${md(d)}<br>${wd(d)}${n ? `(${n})` : ""}</button>`;
+  }).join("");
+  if (closedReason(driverDay)) return `<div class="daytabs">${tabs}</div><div class="card muted">${closedReason(driverDay)}</div>`;
+  const list = myRides(driverDay);
+  return `<div class="daytabs">${tabs}</div>
+  <div class="card"><h2>${md(driverDay)}(${wd(driverDay)}) 行きの送迎 ${list.length}件</h2>
+  ${list.length ? `<ul class="list">${list.map(t => {
+    const s = db.shifts.find(x => x.id === t.shift); const loc = locOf(s.cast);
+    return `<li style="display:block">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <b style="font-size:18px">${t.time || "時間未定"} ${esc(nameOf(s.cast))}</b>
+        <span>${unreadFor(t.id) ? `<span class="badge b-warn">変更あり</span> ` : ""}<span class="badge ${t.status === "done" ? "b-ok" : "b-warn"}">${STATUS[t.status]}</span></span></div>
+      <div class="muted">📍 ${esc(loc.label)} ・ ${esc(loc.address)}</div>
+      <div class="muted">出勤 ${s.start}</div>
+      <div class="rowc">
+        ${t.status === "assigned" ? `<button class="sub" onclick="driverStatus('${t.id}','in_transit')">送迎を始める</button>` : ""}
+        ${t.status === "in_transit" ? `<button class="sub" onclick="driverStatus('${t.id}','done')">完了にする</button>` : ""}
+        ${t.status === "done" ? `<span class="muted">✔ 完了済み</span>` : ""}
+      </div></li>`;
+  }).join("")}</ul>` : `<div class="muted">この日の担当はありません</div>`}</div>
+  <div class="card muted">帰りの送迎の割り当ては当面ありません。</div>`;
+}
+function driverStatus(id, v) {
+  const t = db.transports.find(x => x.id === id); if (t.driver !== driverId) return;   // 担当外は変更できない
+  const b = STATUS[t.status]; t.status = v; logRide(t, "状態の変更(ドライバー)", b, STATUS[v], driverId);
+  db.notices.filter(n => n.to === driverId && n.transport === id).forEach(n => n.read = true);
+  save(); toast(STATUS[v] + "にしました"); render();
+}
+function driverNotices() {
+  const mine = db.notices.filter(n => n.to === driverId).sort((a, b) => b.at.localeCompare(a.at));
+  const unread = mine.filter(n => !n.read).length;
+  return `<div class="card"><h2>変更のお知らせ ${unread ? `<span class="badge b-warn">未読 ${unread}</span>` : ""}</h2>
+    ${mine.length ? `<ul class="list">${mine.map(n => `<li><span style="${n.read ? "color:var(--sub)" : "font-weight:700"}">${esc(n.text)}</span>
+      ${n.read ? `<span class="muted">既読</span>` : `<button class="sub" onclick="readNotice('${n.id}')">確認</button>`}</li>`).join("")}</ul>
+      ${unread ? `<button class="main" onclick="readAll()">すべて確認済みにする</button>` : ""}` : `<div class="muted">お知らせはありません</div>`}</div>`;
+}
+function readNotice(id) { db.notices.find(n => n.id === id).read = true; save(); render(); }
+function readAll() { db.notices.filter(n => n.to === driverId).forEach(n => n.read = true); save(); render(); }
+
+// ===== 画面:管理者 変更履歴(A7) =====
+function adminHistory() {
+  const items = [
+    ...db.shiftHistory.map(h => ({ at: h.at, day: h.day, who: nameOf(h.by), what: "シフト", target: nameOf(h.cast), type: h.type, before: h.before, after: h.after })),
+    ...db.transportHistory.map(h => {
+      const t = db.transports.find(x => x.id === h.transport); const s = t && db.shifts.find(x => x.id === t.shift);
+      return { at: h.at, day: s ? s.day : "", who: nameOf(h.by), what: t && t.dir === "pickup" ? "行きの送迎" : "帰りの送迎", target: s ? nameOf(s.cast) : "", type: h.type, before: h.before, after: h.after };
+    })
+  ].sort((a, b) => b.at.localeCompare(a.at));
+  const t = d => { const x = new Date(d); return (x.getMonth() + 1) + "/" + x.getDate() + " " + x.getHours() + ":" + String(x.getMinutes()).padStart(2, "0"); };
+  return `<div class="card"><h2>変更履歴 <span class="muted">${items.length}件</span></h2>
+    <div class="muted">シフトと送迎の変更は、すべてここに残ります(業務ルールR4)。新しい順。</div></div>
+    <div class="card">${items.length ? `<ul class="list">${items.slice(0, 200).map(h => `<li style="display:block">
+      <div><b>${esc(h.target)}</b> ・ ${h.day ? md(h.day) + "(" + wd(h.day) + ")" : ""} ・ ${h.what}</div>
+      <div>${esc(h.type)}:${esc(h.before ?? "なし")} → ${esc(h.after ?? "なし")}</div>
+      <div class="muted">${t(h.at)} ・ 変更した人:${esc(h.who)}</div></li>`).join("")}</ul>` : `<div class="muted">まだ変更はありません</div>`}</div>`;
+}
+
+// ===== 画面の切り替え =====
+const TABS = {
+  cast:   [["home","🏠","ホーム",castHome], ["submit","📝","シフト提出",castSubmit], ["shifts","✅","確定シフト",castShifts]],
+  admin:  [["dash","📊","提出状況",adminDash], ["table","🗓","希望一覧",adminTable], ["confirm","⏰","シフト確定",adminConfirm], ["rides","🚗","送迎管理",adminRides], ["hist","📜","履歴",adminHistory]],
+  driver: [["dhome","🚗","担当",driverHome], ["dnote","🔔","お知らせ",driverNotices]]
+};
+function go(t) { tab = t; render(); window.scrollTo(0, 0); }
+function render() {
+  const tabs = TABS[role];
+  if (!tabs.find(x => x[0] === tab)) tab = tabs[0][0];
+  const cur = tabs.find(x => x[0] === tab);
+  $("pageTitle").textContent = cur[2];
+  $("pageSub").textContent = { cast: "キャスト用", admin: "管理者用", driver: "ドライバー用" }[role] + " ・ " + STORE.name;
+  $("main").innerHTML = cur[3]();
+  $("nav").innerHTML = tabs.map(x => `<button data-tab="${x[0]}" class="${x[0] === tab ? "on" : ""}"><b>${x[1]}</b>${x[2]}</button>`).join("");
+  document.querySelectorAll("#nav button").forEach(b => b.onclick = () => go(b.dataset.tab));
+  document.querySelectorAll(".demo [data-role]").forEach(b => b.classList.toggle("on", b.dataset.role === role));
+  $("castPick").classList.toggle("hidden", role !== "cast");
+  $("castSel").innerHTML = casts().map(c => `<option value="${c.id}">${esc(c.name)}${submittedAt(c.id) ? "" : "(未提出)"}</option>`).join("");
+  $("castSel").value = castId;
+  $("driverPick").classList.toggle("hidden", role !== "driver");
+  $("driverSel").innerHTML = drivers().map(d => {
+    const n = db.notices.filter(x => x.to === d.id && !x.read).length;
+    return `<option value="${d.id}">${esc(d.name)}${n ? "(未読" + n + ")" : ""}</option>`;
+  }).join("");
+  $("driverSel").value = driverId;
+  if (tab === "submit") bindSubmit();
+}
+
+// ===== 起動 =====
+load();
+$("castSel").onchange = e => { castId = e.target.value; go("home"); };
+$("driverSel").onchange = e => { driverId = e.target.value; render(); };
+document.querySelectorAll(".demo [data-role]").forEach(b => b.onclick = () => { role = b.dataset.role; tab = ""; render(); });
+$("afterDeadline").onchange = e => { forceAfter = e.target.checked; render(); };
+$("resetBtn").onclick = () => { if (!confirm("サンプルデータを初期状態に戻しますか?")) return; db = makeSample(); save(); location.reload(); };
+render();
+</script>
+</body>
+</html>
